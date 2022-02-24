@@ -7,4 +7,4 @@ Feature:
 - Persistent Storage data
 - Edit, Delete, Reply Comment
 - Nth level reply features
-- Pure Vanilla JS
+- Pure Vanilla JS, HTML, CSS
