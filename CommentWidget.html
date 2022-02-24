@@ -1,0 +1,189 @@
+<html>
+<head>
+    <title>Comment Widget</title>
+    <style>
+        #inputComment{
+            width:60%;
+            padding:6px;
+        }
+        .button{
+            padding:8px;
+            background-color: #5e5ea2;
+            color:white;
+        }
+        .perComment{
+            background-color: gray;
+            padding:10px;
+            margin:5px;
+            color:white;
+        }
+        .reply{
+            margin-left:5px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <label for="inputComment">Enter Comment</label>
+        <br/>
+        <input type="text" id="inputComment" name="inputComment" placeholder="Enter comment here"  />
+        <button class="button" id="postCommentButton" type="button">Post Comment</button>
+    </div>
+    <div id="allCommentBox">
+    </div>
+    <script>
+        let allCommentData = localStorage.getItem("allCommentData");
+        if(allCommentData == null){
+            allCommentData = []
+        }else{
+            allCommentData = JSON.parse(allCommentData);
+        }
+        let allCommentBoxTag = document.getElementById("allCommentBox");
+
+        // designing elements
+        function designComment(perCommentData,reply=false){
+            let div = document.createElement("div");
+            div.innerHTML = `<span>${perCommentData.comment}</span>
+            <br/><br/>
+            <button class="button replyComment" data-id="${perCommentData.id}" data-status="replyComment">Reply Comment</button>
+            <button class="button editComment" data-id="${perCommentData.id}" data-status="editComment">Edit Comment</button>
+            <button class="button deleteComment" data-id="${perCommentData.id}" data-status="deleteComment">Delete Comment</button>`;
+            div.className = reply ? "perComment reply" : "perComment";
+            return div
+        }
+
+        // making or paiting comment
+        function makeComment(perCommentData){
+            if(perCommentData.reply.length < 1){
+                return designComment(perCommentData);
+            }else{
+                let reply = displayComment(perCommentData.reply);
+                let com = designComment(perCommentData);
+                com.append(reply);
+                return com;
+            }
+        }
+
+        // loop through all comments
+        function displayComment(allCommentData){
+            let displayDiv=document.createElement("div");
+            for(let i=0;i<allCommentData.length;i++){
+                displayDiv.append(makeComment(allCommentData[i]));
+            }
+            return displayDiv;
+        }
+
+        // push comment
+        function pushComment(comment){
+            let id = allCommentData.length+1;
+            let commentObj = {
+                id,
+                comment,
+                reply: []
+            }
+            allCommentData.push(commentObj);
+            allCommentBoxTag.append(displayComment([commentObj]));
+            localStorage.setItem("allCommentData",JSON.stringify(allCommentData));
+        }
+
+        // delete Comment
+        function filterDelete(comment,id){
+            if(comment.id != id){return false;}
+            return true;
+        }
+
+        function deleteComment(commentData,id,reply=false){
+            for(let i=0;i<commentData.length;i++){
+                if(commentData[i].reply.length>0){
+                    deleteComment(commentData[i].reply,id,true);
+                }
+                if(filterDelete(commentData[i],id)){
+                    commentData.splice(i,1);
+                    break;
+                }
+            }
+            return commentData;
+        }
+
+        function editComment(commentData,updatedComment,id,reply=false){
+            for(let i=0;i<commentData.length;i++){
+                if(commentData[i].reply.length>0){
+                    editComment(commentData[i].reply,updatedComment,id,true);
+                }
+                console.log(commentData[i],id);
+                if(filterDelete(commentData[i],id)){
+                    commentData[i].comment = updatedComment
+                    break;
+                }
+            }
+            return commentData;
+        }
+
+        function replyComment(commentData,repComment, id,reply=false) {
+            for(let i=0;i<commentData.length;i++){
+                if(commentData[i].reply.length>0){
+                    replyComment(commentData[i].reply,repComment,id,true);
+                }
+                if(filterDelete(commentData[i],id)){
+                    repComment = {
+                        id: parseInt(""+commentData[i].id+commentData[i].id),
+                        comment: repComment,
+                        reply:[]
+                    };
+                    if(commentData[i].reply.length < 1){
+                        commentData[i].reply = [repComment]
+                    }else{
+                        commentData[i].reply.push(repComment);
+                    }
+                    break;
+                }
+            }
+            return commentData;
+        }
+
+        // every reload running
+        allCommentBoxTag.append(displayComment(allCommentData));
+
+
+        // listener
+        document.getElementById("postCommentButton").addEventListener("click",function(){
+           let inputComment = document.getElementById("inputComment");
+           // all sanitization we can do here
+           if(inputComment.value === ""){return}
+           //updating comment data
+           pushComment(inputComment.value);
+           inputComment.value = "";
+        });
+        document.getElementById("allCommentBox").addEventListener("click",function(e){
+            let dataID = e.target.dataset.id;
+            if(dataID === undefined){return}
+            let operations = e.target.dataset;
+
+            //delete
+            if(operations.status === "deleteComment"){
+                e.path[1].remove();
+                localStorage.setItem("allCommentData",JSON.stringify(deleteComment(allCommentData,dataID)));
+            }
+            // edit
+            if(operations.status === "editComment"){
+                let updatedComment = prompt("Enter updated Comment");
+                if(updatedComment){
+                    e.path[1].children[0].innerText = updatedComment;
+                    localStorage.setItem("allCommentData",JSON.stringify(editComment(allCommentData,updatedComment,dataID)));
+                }
+            }
+
+            //reply
+            if(operations.status === "replyComment"){
+                let reply = prompt("Enter reply");
+                if(reply){
+                    localStorage.setItem("allCommentData",JSON.stringify(replyComment(allCommentData,reply,dataID)));
+                    allCommentBoxTag.innerHTML = "";
+                    allCommentBoxTag.append(displayComment(allCommentData));
+                }
+            }
+
+        })
+    </script>
+</body>
+</html>
